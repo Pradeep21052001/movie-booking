@@ -2,9 +2,9 @@ const { signUp, login, logout, getCouponCode, bookShow } = require('../controlle
 const express = require("express");
 const router = express.Router()
 
-router.post('/signup',signUp);
-router.post('/login',login);
-router.post('/logout',logout);
+router.post('/auth/signup',signUp);
+router.post('/auth/login',login);
+router.post('/auth/logout',logout);
 router.get('/getCouponCode',getCouponCode);
 router.post('/bookShow',bookShow);
 

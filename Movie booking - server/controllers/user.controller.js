@@ -36,19 +36,28 @@ async function logout(req, res) {
 
 let user;
 async function login(req, res) {
+    const authHeader = req.headers.authorization;
 
-    const { username, password } = req.body;
-
-     user = await Users.findOne({ username });
-
-    if (!user) {
-        return res.status(401).body("This email has not been registered!");
+    // Check if the Authorization header is present
+    if (!authHeader || !authHeader.startsWith("Basic ")) {
+        return res.status(401).json({ error: "Unauthorized: Missing or invalid Authorization header" });
     }
 
-    const validPassword = (password === user.password) ? true : false;
+    // Decode and extract the base64-encoded credentials
+    const credentials = authHeader.split(" ")[1];
+    const decodedCredentials = Buffer.from(credentials, "base64").toString("utf-8");
+    const [username, password] = decodedCredentials.split(":");
+
+    user = await Users.findOne({ username });
+
+    if (!user) {
+        return res.status(401).json({ error: "This email has not been registered!" });
+    }
+
+    const validPassword = password === user.password;
 
     if (!validPassword) {
-        return res.status(401).body("Invalid Credentials!");
+        return res.status(401).json({ error: "Invalid Credentials!" });
     }
 
     const tokenGenerator = new TokenGenerator(256, TokenGenerator.BASE62);
@@ -56,13 +65,14 @@ async function login(req, res) {
 
     const uuid = uuidv4();
 
-    res.header(access - token, token).body.json({
-        username: `${user.firstName}` + `${user.lastName}`,
-        uuid: uuid,
+    res.header('access_token', token).json({
+        username: `${user.firstName}`+`${user.lastName}`,
+        id: uuid,
         access_token: token,
         isLoggedIn: true,
     });
 }
+
 
 function getCouponCode (req,res) {
     res.body.json(user.coupens);
