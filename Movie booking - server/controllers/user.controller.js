@@ -1,7 +1,10 @@
 const { Users } = require('../models/user.model');
 const { v4: uuidv4 } = require('uuid');
-const { TokenGenerator } = require('uuid-token-generator');
+const TokenGenerator = require('uuid-token-generator');
+const b2a = require('b2a');
 
+var user; // Keep track of the user
+var id;
 
 async function signUp(req, res) {
     const { firstName, lastName, email, password, contactNumber } = req.body;
@@ -11,7 +14,7 @@ async function signUp(req, res) {
         email: email,
         password: password,
         contactNumber: contactNumber
-    })
+    });
 
     try {
         const savedUser = await newUser.save();
@@ -24,62 +27,96 @@ async function signUp(req, res) {
 }
 
 async function logout(req, res) {
-    const sessionId = req.headers.authorization;
-    if (sessionId && userSessions.has(sessionId)) {
+    // const sessionId = req.headers.authorization;
+    const sessionId = req.body.uuid;
+
+    if (sessionId) {
         // Invalidate the session (remove it from the userSessions map)
-        userSessions.delete(sessionId);
-        res.json({ message: 'Logout successful' });
+        user.uuid = '';
+        user.accesstoken = '';
+        res.json({ "message": 'Logged Out successfully.' });
     } else {
-        res.status(401).json({ message: 'Unauthorized' });
+        res.status(401).json({ "message": 'Unauthorized' });
     }
 }
 
-let user;
 async function login(req, res) {
     const authHeader = req.headers.authorization;
 
-    // Check if the Authorization header is present
-    if (!authHeader || !authHeader.startsWith("Basic ")) {
-        return res.status(401).json({ error: "Unauthorized: Missing or invalid Authorization header" });
+    if (!authHeader) {
+        return res.status(401).json({ error: 'Authorization header is missing' });
     }
 
-    // Decode and extract the base64-encoded credentials
-    const credentials = authHeader.split(" ")[1];
-    const decodedCredentials = Buffer.from(credentials, "base64").toString("utf-8");
-    const [username, password] = decodedCredentials.split(":");
+    const base64Credentials = authHeader.replace('Basic ', '');
 
-    user = await Users.findOne({ username });
+    // Decode the base64 string to obtain the username and password
+    const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
+    const [username, password] = credentials.split(':');
+
+    const user = await Users.findOne({ username }).select('-_id');
 
     if (!user) {
-        return res.status(401).json({ error: "This email has not been registered!" });
+        return res.status(401).send("This user has not been registered!");
     }
 
-    const validPassword = password === user.password;
+    const validPassword = (password === user.password) ? true : false;
 
     if (!validPassword) {
-        return res.status(401).json({ error: "Invalid Credentials!" });
+        return res.status(401).send("Invalid Credentials!");
     }
 
     const tokenGenerator = new TokenGenerator(256, TokenGenerator.BASE62);
-    const token = tokenGenerator.generate();
-
     const uuid = uuidv4();
+    const token = Buffer.from(tokenGenerator.generate(uuid)).toString('base64');
 
-    res.header('access_token', token).json({
-        username: `${user.firstName}`+`${user.lastName}`,
-        id: uuid,
-        access_token: token,
-        isLoggedIn: true,
-    });
+    user.uuid = uuid;
+    user.accesstoken = token;
+    const resData = {
+        "username": username,
+        "id": uuid,
+        "access_token": token,
+        "isLoggedIn": true
+    };
+    res.header('access_token', token).json(resData);
+    console.log(user);
+    console.log(user.coupens);
+    console.log(typeof user);
 }
 
+// Adapted getCouponCode function to match couponApplyHandler
+async function getCouponCode(req, res) {
+    const code = req.query.code; // Use query parameter to get code
+   
+    console.log(user);
+    console.log(user.coupens);
+    console.log(user.first_name);
+    console.log(user);
+    console.log(user["username"]);
 
-function getCouponCode (req,res) {
-    res.body.json(user.coupens);
+    if (!user || !user.coupens) {
+        return res.status(404).json({ message: "Invalid user or missing coupens array" });
+    }
+
+    const coupon = user.coupens.find(coupon => coupon.id == code); // Use == for loose comparison
+
+    if (!coupon) {
+        return res.status(404).json({ message: "Invalid coupon code" });
+    }
+
+    res.json(coupon);
 }
 
-async function bookShow (req,res) {
-    
+async function bookShow(req, res) {
+    const ref = "5019457";
+    const { code, show, tickets } = req.body;
+    const request = {
+        reference_number: ref,
+        coupon_code: code,
+        show_id: show,
+        tickets: tickets
+    };
+    user.bookingRequests.push(request);
+    res.json({ reference_number: ref });
 }
 
-module.exports = { signUp, login, logout, getCouponCode, bookShow }
+module.exports = { signUp, login, logout, getCouponCode, bookShow };

@@ -146,7 +146,7 @@ class Header extends Component {
             "last_name": this.state.lastname,
             "mobile_number": this.state.contact,
             "password": this.state.registerPassword
-        });
+        }); 
 
         let xhrSignup = new XMLHttpRequest();
         let that = this;

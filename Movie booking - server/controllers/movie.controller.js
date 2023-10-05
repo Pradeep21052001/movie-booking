@@ -3,6 +3,7 @@ const { Movie } = require('../models/movie.model');
 
 async function findAllMovies(req, res) {
     try {
+        // console.log(req.headers);
         const { status, title, genres, artists, start_date, end_date } = req.query;
         if (status == undefined) {
             const movies = await Movie.find();
