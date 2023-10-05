@@ -3,30 +3,51 @@ const { Movie } = require('../models/movie.model');
 
 async function findAllMovies(req, res) {
     try {
-        // console.log(req.headers);
         const { status, title, genres, artists, start_date, end_date } = req.query;
-        if (status == undefined) {
-            const movies = await Movie.find();
-            res.json(movies);
+        let movies = await Movie.find();
+
+        if (status === "PUBLISHED") {
+            movies = movies.filter(movie => movie.published === true);
         }
-        // else if (status != undefined || title != undefined || genres != undefined || artists != undefined || start_date != undefined || end_date != undefined) {
-        //     if (status === 'PUBLISHED') {
-        //         const movies = await Movie.find({$and : [{ 'published': true }, { 'title': title }, { 'genres': genres }, { 'artists': artists }]});
-        //         res.body(movies);
-        //     }
-        //     else if (status === 'RELEASED') {
-        //         const movies = await Movie.find({$and : [{ 'released': true }, { 'title': title }, { 'genres': genres }, { 'artists': artists }]});
-        //         res.body(movies);
-        //     }gh
-        // }
-        else if (status === "PUBLISHED") {
-            const movies = await Movie.find({ 'published': true });
-            res.json(movies);
+        if (status === "RELEASED") {
+            movies = movies.filter(movie => movie.released === true);
         }
-        else if (status === "RELEASED") {
-            const movies = await Movie.find({ 'released': true });
-            res.json(movies);
+        if (title) {
+            movies = movies.filter(movie => movie.title.toLowerCase() === title.toLowerCase());
         }
+        if (genres) {
+            const Genres = genres.split(',');
+            movies = movies.filter(movie => {
+                return Genres.every(genre => movie.genres.includes(genre));
+            });
+        }
+        if (artists) {
+            const Artists = artists.split(',');
+            movies = movies.filter(movie => {
+                return Artists.every(artist => {
+                    return movie.artists.some(artistObj => {
+                        const fullName = artistObj.first_name + ' ' + artistObj.last_name;
+                        return fullName === artist;
+                    });
+                });
+            });
+        }
+        if (start_date) {
+            const startDate = new Date(start_date);
+            movies = movies.filter(movie => {
+                const movieReleaseDate = new Date(movie.release_date);
+                return movieReleaseDate >= startDate;
+            });
+        }
+        if (end_date) {
+            const endDate = new Date(end_date);
+            movies = movies.filter(movie => {
+                const movieReleaseDate = new Date(movie.release_date);
+                return movieReleaseDate <= endDate;
+            });
+        }
+        res.json(movies);
+
     } catch (err) {
         console.log(err);
     }

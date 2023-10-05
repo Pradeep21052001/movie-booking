@@ -3,18 +3,22 @@ const { v4: uuidv4 } = require('uuid');
 const TokenGenerator = require('uuid-token-generator');
 const b2a = require('b2a');
 
-var user; // Keep track of the user
-var id;
+let user; // Keep track of the user
+
 
 async function signUp(req, res) {
-    const { firstName, lastName, email, password, contactNumber } = req.body;
+    // console.log(req.body)
+    const { email_address, first_name, last_name, mobile_number, password } = req.body;
     const newUser = new Users({
-        firstName: firstName,
-        lastName: lastName,
-        email: email,
-        password: password,
-        contactNumber: contactNumber
+        email: email_address,
+        first_name: first_name,
+        last_name: last_name,
+        username : `${first_name} ${last_name}`,
+        contact: mobile_number,
+        password: password
     });
+    
+    console.log(newUser);   
 
     try {
         const savedUser = await newUser.save();
@@ -22,6 +26,7 @@ async function signUp(req, res) {
         res.status(201).json(savedUser);
     } catch (error) {
         // Handle any errors and respond with an error message
+        console.log(error);
         res.status(500).json({ error: 'Error saving user to the database' });
     }
 }
@@ -34,6 +39,7 @@ async function logout(req, res) {
         // Invalidate the session (remove it from the userSessions map)
         user.uuid = '';
         user.accesstoken = '';
+        user = undefined;
         res.json({ "message": 'Logged Out successfully.' });
     } else {
         res.status(401).json({ "message": 'Unauthorized' });
@@ -53,7 +59,7 @@ async function login(req, res) {
     const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
     const [username, password] = credentials.split(':');
 
-    const user = await Users.findOne({ username }).select('-_id');
+    user = await Users.findOne({ username }).select('-_id');
 
     if (!user) {
         return res.status(401).send("This user has not been registered!");
@@ -74,31 +80,17 @@ async function login(req, res) {
     const resData = {
         "username": username,
         "id": uuid,
-        "access_token": token,
+        "access-token": token,  
         "isLoggedIn": true
     };
-    res.header('access_token', token).json(resData);
-    console.log(user);
-    console.log(user.coupens);
-    console.log(typeof user);
+    res.header('access-token', token).json(resData);
 }
 
-// Adapted getCouponCode function to match couponApplyHandler
+
 async function getCouponCode(req, res) {
     const code = req.query.code; // Use query parameter to get code
-   
-    console.log(user);
-    console.log(user.coupens);
-    console.log(user.first_name);
-    console.log(user);
-    console.log(user["username"]);
 
-    if (!user || !user.coupens) {
-        return res.status(404).json({ message: "Invalid user or missing coupens array" });
-    }
-
-    const coupon = user.coupens.find(coupon => coupon.id == code); // Use == for loose comparison
-
+    const coupon = await user.coupens.find(coupon => coupon.id == code); 
     if (!coupon) {
         return res.status(404).json({ message: "Invalid coupon code" });
     }

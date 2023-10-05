@@ -58,7 +58,7 @@ class Header extends Component {
             contactRequired: "dispNone",
             contact: "",
             registrationSuccess: false,
-            loggedIn: sessionStorage.getItem("access_token") == null ? false : true
+            loggedIn: sessionStorage.getItem("access-token") == null ? false : true
         }
     }
 
@@ -102,10 +102,10 @@ class Header extends Component {
             if (this.readyState === 4) {
                 sessionStorage.setItem("uuid", JSON.parse(this.responseText).id);
                 //sessionStorage.setItem("access-token", xhrLogin.getResponseHeader("access-token"));
-                
-                if(xhrLogin.getResponseHeader("access_token") == null)
+
+                if(xhrLogin.getResponseHeader("access-token") == null)
                 {
-                    sessionStorage.setItem("accesstoken", JSON.parse(this.responseText)["access_token"]);
+                    sessionStorage.setItem("access-token", JSON.parse(this.responseText)["access-token"]);
                 }
                 
             
@@ -146,7 +146,7 @@ class Header extends Component {
             "last_name": this.state.lastname,
             "mobile_number": this.state.contact,
             "password": this.state.registerPassword
-        }); 
+        });
 
         let xhrSignup = new XMLHttpRequest();
         let that = this;
@@ -199,7 +199,7 @@ class Header extends Component {
                 if(JSON.parse(this.responseText).message == "Logged Out successfully.")
                 {
                     sessionStorage.removeItem("uuid");
-                    sessionStorage.removeItem("access_token");
+                    sessionStorage.removeItem("access-token");
 
                     that.setState({
                         loggedIn: false
